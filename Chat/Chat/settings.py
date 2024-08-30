@@ -30,7 +30,7 @@ SECRET_KEY = os.environ.get("SECRET_KEY")
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.environ.get("DEBUG")
 
-OPEN_API_KEY = os.environ.get("OPEN_API_KEY")
+GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
 
 ALLOWED_HOSTS = []
 
