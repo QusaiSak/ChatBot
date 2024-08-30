@@ -1,100 +1,76 @@
 import axios from 'axios';
-import {ThumbsDown, ThumbsUp } from "lucide-react";
-import { useEffect, useState } from 'react';
-axios.defaults.baseURL = 'http://127.0.0.1:8000';
+import { useState } from 'react';
 
 function App() {
-  const [messages, setMessages] = useState([])
-  const [inputMessage, setInputMessage] = useState('')
+  const [messages, setMessages] = useState([]);
+  const [input, setInput] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
-  useEffect(() => {
-    fetchQuestions()
-  }, [])
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!input.trim()) return;
 
-  const fetchQuestions = async () => {
+    setMessages(prev => [...prev, { text: input, sender: 'user' }]);
+    setInput('');
+    setIsLoading(true);
+
     try {
-      const response = await axios.get('/api/questions/')
-      setMessages(response.data.results)
-    } catch (error) {
-      console.error('Error fetching questions:', error)
-    }
-  }
+      const response = await axios.post('http://127.0.0.1:8000/api/chat/', { message: input });
+      
+      // Format the response text
+      let resarr = response.data.response.split("**");
+      let formattedText = "";
+      for (let i = 0; i < resarr.length; i++) {
+        if (i % 2 === 1) {
+          formattedText += `<b>${resarr[i]}</b>`; // Add bold tags
+        } else {
+          formattedText += resarr[i]; // Add regular text
+        }
+      }
+      
+      formattedText = formattedText.replace(/\*/g, "<br>"); // Replace "*" with "<br>"
 
-  const sendMessage = async () => {
-    if (!inputMessage.trim()) return
-    try {
-      const response = await axios.post('/api/answers/', { text: inputMessage })
-      setMessages(prevMessages => [...prevMessages, response.data])
-      setInputMessage('')
+      console.log('Response from server:', formattedText); // Log response data
+      setMessages(prev => [...prev, { text: formattedText, sender: 'bot' }]);
     } catch (error) {
-      console.error('Error sending message:', error)
+      console.error('Error fetching response:', error);
+      setMessages(prev => [...prev, { text: 'Sorry, I encountered an error. Please try again.', sender: 'bot' }]);
+    } finally {
+      setIsLoading(false);
     }
-  }
+  };
 
-  const voteAnswer = async (answerId, voteType) => {
-    try {
-      await axios.post(`/api/answers/${answerId}/vote/`, { vote_type: voteType })
-      fetchQuestions() // Refresh the questions to update vote counts
-    } catch (error) {
-      console.error('Error voting:', error)
-    }
-  }
   return (
-    <>
-      <div className="flex flex-col h-screen max-w-2xl mx-auto p-4 bg-gray-100">
-      <h1 className="text-2xl font-bold mb-4 text-gray-800">Agriculture Chatbot</h1>
-      <div className="flex-grow mb-4 overflow-y-auto border rounded-md p-4 bg-white">
-        {messages.map((question) => (
-          <div key={question.id} className="mb-4">
-            <div className="bg-gray-200 p-3 rounded-t-md">
-              <p className="font-semibold text-gray-800">{question.text}</p>
-            </div>
-            {question.answers.map((answer) => (
-              <div key={answer.id} className={`p-3 rounded-b-md ${answer.is_bot_answer ? 'bg-blue-100' : 'bg-green-100'}`}>
-                <p className="mb-2 text-gray-700">{answer.text}</p>
-                <div className="flex items-center space-x-2">
-                  <button
-                    className="flex items-center px-2 py-1 border border-gray-300 rounded text-sm text-gray-600 hover:bg-gray-200"
-                    onClick={() => voteAnswer(answer.id, 'up')}
-                    aria-label="Upvote"
-                  >
-                    <ThumbsUp className="h-4 w-4 mr-1" />
-                    <span>Upvote</span>
-                  </button>
-                  <button
-                    className="flex items-center px-2 py-1 border border-gray-300 rounded text-sm text-gray-600 hover:bg-gray-200"
-                    onClick={() => voteAnswer(answer.id, 'down')}
-                    aria-label="Downvote"
-                  >
-                    <ThumbsDown className="h-4 w-4 mr-1" />
-                    <span>Downvote</span>
-                  </button>
-                  <span className="text-sm text-gray-500">Votes: {answer.votes}</span>
-                </div>
-              </div>
-            ))}
-          </div>
+    <div className="max-w-3xl mx-auto p-4">
+      <div className="h-[400px] overflow-y-auto border border-gray-300 p-4 mb-4 rounded-lg bg-white">
+        {messages.map((message, index) => (
+          <div 
+            key={index} 
+            className={`mb-2 p-2 rounded-lg ${message.sender === 'user' ? 'bg-blue-100 text-right' : 'bg-gray-100'}`}
+            dangerouslySetInnerHTML={{ __html: message.text }}
+          />
         ))}
+        {isLoading && <div className="bg-gray-100 p-2 rounded-lg text-center">Thinking...</div>}
       </div>
-      <div className="flex space-x-2">
+      <form onSubmit={handleSubmit} className="flex">
         <input
           type="text"
-          value={inputMessage}
-          onChange={(e) => setInputMessage(e.target.value)}
-          placeholder="Ask an agriculture-related question..."
-          className="flex-grow px-4 py-2 border border-gray-300 rounded-md"
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          placeholder="Ask about agriculture..."
+          disabled={isLoading}
+          className="flex-grow p-2 border border-gray-300 rounded-l-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
         />
         <button
-          onClick={sendMessage}
-          disabled={!inputMessage.trim()}
-          className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
+          type="submit"
+          disabled={isLoading}
+          className={`p-2 rounded-r-lg text-white ${isLoading ? 'bg-gray-400' : 'bg-blue-500 hover:bg-blue-600'} focus:outline-none focus:ring-2 focus:ring-blue-500`}
         >
           Send
         </button>
-      </div>
+      </form>
     </div>
-    </>
-  )
+  );
 }
 
-export default App
+export default App;

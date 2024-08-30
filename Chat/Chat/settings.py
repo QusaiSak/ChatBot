@@ -33,8 +33,9 @@ DEBUG = os.environ.get("DEBUG")
 OPEN_API_KEY = os.environ.get("OPEN_API_KEY")
 
 ALLOWED_HOSTS = []
-CORS_ALLOW_ALL_ORIGINS = True
-CORS_ALLOW_CREDENTIALS = True
+
+CORS_ALLOWED_ORIGINS = ["http://localhost:5173"]
+CORS_ALLOWED_CREDENTIALS = True
 
 # Application definition
 
